@@ -36,13 +36,13 @@ To send us a pull request, please:
 5. Send us a pull request, answering any default questions in the pull request interface.
 6. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
 
-GitHub provides additional document on [forking a repository](https://help.github.com/articles/fork-a-repo/) and
-[creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
+GitHub provides additional document on [forking a repository](https://docs.github.com/en/pull-requests/how-tos/work-with-forks/fork-a-repo) and
+[creating a pull request](https://docs.github.com/en/pull-requests/how-tos/create-pull-requests/creating-a-pull-request).
 
 
 ## Versioning
 
-[`VERSION`](./VERSION) holds a single semantic version and is the source of truth. `scripts/deploy.sh` reads it and stamps it onto every stack as a `KiroAnalyticsVersion` tag and onto each QuickSight dashboard version, which is how a deployment in the field can be traced back to the code that produced it.
+[`VERSION`](./VERSION) holds a single semantic version and is the source of truth. `scripts/deploy.sh` reads it and stamps it onto every stack as a `KiroAnalyticsVersion` tag and onto each Quick Sight dashboard version, which is how a deployment in the field can be traced back to the code that produced it.
 
 A contributor does **not** need to bump it — maintainers do that when cutting a release:
 
@@ -75,7 +75,7 @@ opensource-codeofconduct@amazon.com with any additional questions or comments.
 
 
 ## Security issue notifications
-If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public github issue.
+If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](https://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public github issue.
 
 
 ## Licensing

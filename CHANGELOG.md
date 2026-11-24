@@ -43,6 +43,26 @@ In every case the fix is `git pull` then re-run `scripts/deploy.sh` — see
 [Upgrading](./README.md#upgrading) in the README, and note the SPICE-refresh step
 there, because a view change is **not** visible until the data is re-ingested.
 
+## [Unreleased]
+
+Documentation only. Nothing that gets deployed changed, so there is nothing to
+re-deploy and `VERSION` stays at 1.1.0.
+
+### Changed
+
+- **Renamed for AWS Quick.** Amazon QuickSight is now AWS Quick Sight, and this
+  repository is now `sample-kiro-user-analytics-aws-quick-sight-dashboard`; the
+  old URL redirects. Only the product name changed: the API, CLI, CloudFormation
+  and IAM names are still `quicksight`, so nothing in the code was renamed.
+- **Corrected what triggers the $250/month account fee.** The pricing page now
+  lists at least one Pro user *or* Q&A enabled via Topics; "Amazon Q in
+  QuickSight" no longer exists. The Cost section's check only looked for Pro
+  users, so an account with Topics and no Pro users read as fee-free. It now
+  lists Topics as well.
+- Updated links that had moved: the IAM Identity Store service-authorization
+  reference in SECURITY.md, the GitHub contribution guides, and the
+  vulnerability-reporting page (now HTTPS).
+
 ## [1.1.0] - 2026-10-09
 
 A plain re-deploy picks all of this up. No Athena view changed, so no SPICE
@@ -189,5 +209,6 @@ release and is recorded so an existing deployment can be placed in history.
   refresh schedules. Verified by byte-comparing the generated dashboard
   definition before and after. (#27)
 
-[1.1.0]: https://github.com/aws-samples/sample-kiro-user-analytics-quicksight-dashboard/releases/tag/v1.1.0
-[1.0.0]: https://github.com/aws-samples/sample-kiro-user-analytics-quicksight-dashboard/releases/tag/v1.0.0
+[Unreleased]: https://github.com/aws-samples/sample-kiro-user-analytics-aws-quick-sight-dashboard/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/aws-samples/sample-kiro-user-analytics-aws-quick-sight-dashboard/releases/tag/v1.1.0
+[1.0.0]: https://github.com/aws-samples/sample-kiro-user-analytics-aws-quick-sight-dashboard/releases/tag/v1.0.0

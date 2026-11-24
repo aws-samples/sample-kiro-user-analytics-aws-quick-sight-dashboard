@@ -96,7 +96,7 @@ class TestPipelineFraming(unittest.TestCase):
         must be attributable - otherwise it gets blamed on this sample."""
         self.assertIn("$250", SECTION)
         self.assertRegex(SECTION, r"(?i)pro user")
-        self.assertRegex(SECTION, r"(?i)amazon q")
+        self.assertRegex(SECTION, r"(?i)q&a enabled via topics")
 
     def test_a_pro_user_detection_command_is_given(self):
         """Naming a charge without a way to check for it is not actionable."""

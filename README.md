@@ -1,6 +1,8 @@
 # Sample Kiro User Analytics Dashboard
 
-A deployable Amazon QuickSight dashboard for the Kiro **User Activity Report** exported to Amazon S3. This solution gives Kiro administrators per-user analytics and engagement insights that the built-in Kiro dashboard does not surface.
+A deployable AWS Quick Sight dashboard for the Kiro **User Activity Report** exported to Amazon S3. This solution gives Kiro administrators per-user analytics and engagement insights that the built-in Kiro dashboard does not surface.
+
+> **Naming:** Amazon QuickSight is now **AWS Quick Sight**, part of [AWS Quick](https://aws.amazon.com/about-aws/whats-new/2026/11/amazon-quick-aws-quick/). Only the product name changed. The service's API, CLI (`aws quicksight`), CloudFormation types (`AWS::QuickSight::*`) and IAM actions (`quicksight:*`) keep the old name, so you will see both in this repo.
 
 ## Overview
 
@@ -20,7 +22,7 @@ For Kiro **cost and seat utilization** questions (per-user spend, idle seats, bi
 
 ![Architecture diagram](./docs/architecture.png)
 
-Kiro writes a daily user activity report to a customer-owned Amazon S3 bucket. An AWS Lambda function reads those CSVs by header and writes a fixed-schema normalized copy (a stable "facts" dataset plus a long-form per-model "messages" dataset), partitioned by export date, back to the results bucket; Amazon Athena partitioned external tables plus dedup views curate that normalized data. Amazon QuickSight datasets import the curated views into SPICE and refresh daily. The published dashboard exposes four sheets - Activity & Trends, Economics, People, and User detail - with model, tier, and date-range pickers across the sheets.
+Kiro writes a daily user activity report to a customer-owned Amazon S3 bucket. An AWS Lambda function reads those CSVs by header and writes a fixed-schema normalized copy (a stable "facts" dataset plus a long-form per-model "messages" dataset), partitioned by export date, back to the results bucket; Amazon Athena partitioned external tables plus dedup views curate that normalized data. AWS Quick Sight datasets import the curated views into SPICE and refresh daily. The published dashboard exposes four sheets - Activity & Trends, Economics, People, and User detail - with model, tier, and date-range pickers across the sheets.
 
 Reading the raw report by header (rather than crawling it into a positional table) is deliberate: the report's columns drift over time - Kiro adds a new `<model>_messages` column whenever it launches a model, and the trailing `New_User` column is present in some exports and not others - so a positional table misattributes per-model usage and corrupts `new_user`. The normalizer keys every value by its header name, which is immune to that drift.
 
@@ -67,11 +69,11 @@ Most visuals respond to the date-range picker, but one uses a **fixed window** b
 
 ### Pre-requisites
 
-* An [AWS account](https://aws.amazon.com/account/) with permissions to deploy AWS CloudFormation stacks and create the resources used by this solution: AWS Glue (database), Amazon Athena (workgroup), AWS Lambda (the report normalizer + IAM role) and Amazon EventBridge (its daily schedule), Amazon S3 (one results bucket), and Amazon QuickSight (data source, datasets, refresh schedules, analysis, dashboard). Administrator access is sufficient but not required - the equivalent service permissions work.
+* An [AWS account](https://aws.amazon.com/account/) with permissions to deploy AWS CloudFormation stacks and create the resources used by this solution: AWS Glue (database), Amazon Athena (workgroup), AWS Lambda (the report normalizer + IAM role) and Amazon EventBridge (its daily schedule), Amazon S3 (one results bucket), and AWS Quick Sight (data source, datasets, refresh schedules, analysis, dashboard). Administrator access is sufficient but not required - the equivalent service permissions work.
 * The Kiro **User Activity Report** export to Amazon S3 enabled by a Kiro administrator. See the [Kiro user activity report documentation](https://kiro.dev/docs/enterprise/monitor-and-track/user-activity/).
-* **Amazon QuickSight Enterprise edition** active in the AWS Region you deploy into (`AWS_REGION`). The Kiro logs bucket may be in a **different** Region - see [Deploying across Regions](#deploying-across-regions).
-* Amazon Athena enabled in QuickSight (QuickSight -> Manage account -> Permissions -> AWS resources -> check **Athena**). The deploy script does not toggle this for you - Amazon QuickSight requires the toggle to be set via the console. The same screen also asks you to select Amazon S3 buckets; leave the S3 selection empty (the deploy script handles S3 access separately, see the next bullet). When you click Save, QuickSight should attach the `AWSQuicksightAthenaAccess` managed policy to the QuickSight service role - in some accounts this attachment silently fails. The deploy script verifies the policy is attached and offers to attach it for you if it is not.
-* Amazon S3 access for Amazon QuickSight does **not** need to be pre-configured via the console. The deploy script grants S3 access automatically by attaching an inline IAM policy named `<STACK_PREFIX>-QuickSightS3Access` (so `kiro-analytics-QuickSightS3Access` by default) to the QuickSight service role. The name is namespaced per deployment because every deployment in an account shares one QuickSight service role. Read on the Kiro logs bucket, read + write on the Athena results bucket (Athena queries run by QuickSight write their results there). The console-managed `AWSQuickSightS3Policy` is left untouched, so the QuickSight console keeps full ownership of it - this avoids the *"This policy was modified outside of QuickSight"* warning that appears when the console-managed policy is edited by another tool. See [QuickSight permission errors](https://repost.aws/knowledge-center/quicksight-permission-errors) and [Athena output bucket error](https://repost.aws/knowledge-center/athena-output-bucket-error) for background.
+* **AWS Quick Sight Enterprise edition** active in the AWS Region you deploy into (`AWS_REGION`). The Kiro logs bucket may be in a **different** Region - see [Deploying across Regions](#deploying-across-regions).
+* Amazon Athena enabled in Quick Sight (QuickSight -> Manage account -> Permissions -> AWS resources -> check **Athena**). The deploy script does not toggle this for you - AWS Quick Sight requires the toggle to be set via the console. The same screen also asks you to select Amazon S3 buckets; leave the S3 selection empty (the deploy script handles S3 access separately, see the next bullet). When you click Save, Quick Sight should attach the `AWSQuicksightAthenaAccess` managed policy to the Quick Sight service role - in some accounts this attachment silently fails. The deploy script verifies the policy is attached and offers to attach it for you if it is not.
+* Amazon S3 access for AWS Quick Sight does **not** need to be pre-configured via the console. The deploy script grants S3 access automatically by attaching an inline IAM policy named `<STACK_PREFIX>-QuickSightS3Access` (so `kiro-analytics-QuickSightS3Access` by default) to the Quick Sight service role. The name is namespaced per deployment because every deployment in an account shares one Quick Sight service role. Read on the Kiro logs bucket, read + write on the Athena results bucket (Athena queries run by Quick Sight write their results there). The console-managed `AWSQuickSightS3Policy` is left untouched, so the Quick Sight console keeps full ownership of it - this avoids the *"This policy was modified outside of QuickSight"* warning that appears when the console-managed policy is edited by another tool. See [Quick Sight permission errors](https://repost.aws/knowledge-center/quicksight-permission-errors) and [Athena output bucket error](https://repost.aws/knowledge-center/athena-output-bucket-error) for background.
 * AWS CLI v2, Python 3.10 or later, and the `boto3` Python package (install with `python3 -m pip install 'boto3>=1.34'` if not already present).
 * A Unix-style shell to run the deployment scripts: macOS, Linux, Windows Subsystem for Linux (WSL), Git Bash on Windows, or AWS CloudShell. Native Windows PowerShell and `cmd.exe` are not supported - use AWS CloudShell from the AWS Console as the simplest option (bash, AWS CLI v2, Python 3, and `boto3` are pre-installed).
 
@@ -80,8 +82,8 @@ Most visuals respond to the date-range picker, but one uses a **fixed window** b
 1. Clone the repository.
 
    ```bash
-   git clone https://github.com/aws-samples/sample-kiro-user-analytics-quicksight-dashboard.git
-   cd sample-kiro-user-analytics-quicksight-dashboard
+   git clone https://github.com/aws-samples/sample-kiro-user-analytics-aws-quick-sight-dashboard.git
+   cd sample-kiro-user-analytics-aws-quick-sight-dashboard
    ```
 
 2. Set the required environment variables.
@@ -95,7 +97,7 @@ Most visuals respond to the date-range picker, but one uses a **fixed window** b
 
    * **`KIRO_LOGS_BUCKET`** - bucket name, ARN, or `s3://` URI all work. The script normalizes them.
 
-   * **`QS_PRINCIPAL_ARN`** - the Amazon QuickSight user (or group) that should own the dashboard. To find it, run:
+   * **`QS_PRINCIPAL_ARN`** - the AWS Quick Sight user (or group) that should own the dashboard. To find it, run:
 
      ```bash
      aws quicksight list-users \
@@ -108,7 +110,7 @@ Most visuals respond to the date-range picker, but one uses a **fixed window** b
 
      For users signed in via AWS IAM Identity Center or SSO the `UserName` may contain a slash (e.g. `Admin/sso-session`); copy the ARN from this command verbatim rather than constructing it by hand.
 
-   * **`AWS_REGION`** - the Region to deploy into. Amazon QuickSight must be active here, because everything the stack creates (Glue database, Athena workgroup, results bucket, Lambda, datasets, dashboard) is created in this Region. It does **not** have to match the Region of `KIRO_LOGS_BUCKET` - see [Deploying across Regions](#deploying-across-regions).
+   * **`AWS_REGION`** - the Region to deploy into. AWS Quick Sight must be active here, because everything the stack creates (Glue database, Athena workgroup, results bucket, Lambda, datasets, dashboard) is created in this Region. It does **not** have to match the Region of `KIRO_LOGS_BUCKET` - see [Deploying across Regions](#deploying-across-regions).
 
    * **`KIRO_LOGS_PREFIX`** - the path inside `KIRO_LOGS_BUCKET` above `AWSLogs/<account-id>/KiroLogs/user_report/`. **Setting it explicitly is strongly recommended.** If unset, the deploy and preflight scripts run `aws s3 ls --recursive` to auto-detect it, which paginates through every key in the bucket. On large buckets that hold other content (Amazon Q logs, other AWS service logs, prompt logs from another product) this can take many minutes and incurs a per-1000-keys Amazon S3 LIST charge. To find the right value, list the bucket non-recursively:
 
@@ -122,9 +124,9 @@ Most visuals respond to the date-range picker, but one uses a **fixed window** b
 
    * **HASH_EMAILS** (default `false`): SHA-256 emails at the view layer so plaintext does not reach SPICE.
    * **KMS_KEY_ARN** (default empty): AWS Key Management Service (AWS KMS) key ARN that encrypts the Kiro logs bucket. The report-normalizer Lambda role is granted `kms:Decrypt` on this key. Required if the bucket uses a customer-managed key - including when that key is in a different Region from `AWS_REGION` (see [Deploying across Regions](#deploying-across-regions)). Not needed for default SSE-S3 encryption.
-   * **STACK_PREFIX** (default `kiro-analytics`): Prefix for the two AWS CloudFormation stacks. It also namespaces the Glue database, the Athena workgroup, the QuickSight asset IDs, the QuickSight inline S3 policy, and the dashboard's display name, so several deployments can coexist in one account - give each a distinct prefix.
-   * **DASHBOARD_NAME** (default derived from `STACK_PREFIX`): Display name for the Analysis and Dashboard in the QuickSight console. The default deployment is named `Kiro User Analytics`; any other prefix gets `Kiro User Analytics (<STACK_PREFIX>)`, so parallel deployments are distinguishable in the console rather than appearing as identical rows. Set this to override with something meaningful, e.g. `DASHBOARD_NAME="Kiro - EU Production"`. Renaming is safe on an existing deployment: the asset **ID** is unchanged, so dashboard URLs, permissions and bookmarks all survive.
-   * **QS_IAM_ROLE_NAME** (default `aws-quicksight-service-role-v0`): The IAM role QuickSight uses to access AWS resources. Change this if your QS account is configured under QuickSight -> Manage account -> Permissions -> IAM role -> "Use an existing role" - set it to the name of that existing role. The deploy script confirms the role with you before writing to it.
+   * **STACK_PREFIX** (default `kiro-analytics`): Prefix for the two AWS CloudFormation stacks. It also namespaces the Glue database, the Athena workgroup, the Quick Sight asset IDs, the Quick Sight inline S3 policy, and the dashboard's display name, so several deployments can coexist in one account - give each a distinct prefix.
+   * **DASHBOARD_NAME** (default derived from `STACK_PREFIX`): Display name for the Analysis and Dashboard in the Quick Sight console. The default deployment is named `Kiro User Analytics`; any other prefix gets `Kiro User Analytics (<STACK_PREFIX>)`, so parallel deployments are distinguishable in the console rather than appearing as identical rows. Set this to override with something meaningful, e.g. `DASHBOARD_NAME="Kiro - EU Production"`. Renaming is safe on an existing deployment: the asset **ID** is unchanged, so dashboard URLs, permissions and bookmarks all survive.
+   * **QS_IAM_ROLE_NAME** (default `aws-quicksight-service-role-v0`): The IAM role Quick Sight uses to access AWS resources. Change this if your QS account is configured under QuickSight -> Manage account -> Permissions -> IAM role -> "Use an existing role" - set it to the name of that existing role. The deploy script confirms the role with you before writing to it.
    * **THEME_MODE** (default `light`): Set to `dark` for a dark-mode dashboard. The Kiro purple categorical palette is the same in both modes; only the background and text colors flip.
    * **IDENTITY_MAPPING** (default `false`): Resolve the report's opaque `user_id` GUIDs to human names via AWS IAM Identity Center. Opt-in; see [Resolving user identities](#resolving-user-identities-optional) below. On an interactive deploy you are prompted `y/N` if this is unset. Mutually exclusive with `HASH_EMAILS`.
    * **IDENTITY_STORE_ID** (required when `IDENTITY_MAPPING=true`): The Identity Store id, which **starts with `d-`** (e.g. `d-1234567890`). This is *not* the Identity Center instance ARN or `ssoins-` instance id. Find it on the IAM Identity Center **Settings** page, or run `aws sso-admin list-instances --query 'Instances[].IdentityStoreId'`. The deploy script rejects an instance ARN / `ssoins-` value with a pointer to the right one.
@@ -148,9 +150,9 @@ Most visuals respond to the date-range picker, but one uses a **fixed window** b
    scripts/deploy.sh
    ```
 
-   The deploy script creates two AWS CloudFormation stacks (data layer and QuickSight layer), invokes the report-normalizer Lambda, builds Amazon Athena external tables and views, attaches an inline IAM policy to the QuickSight service role for S3 access, and creates the QuickSight Analysis and Dashboard. End-to-end runtime is approximately five minutes.
+   The deploy script creates two AWS CloudFormation stacks (data layer and Quick Sight layer), invokes the report-normalizer Lambda, builds Amazon Athena external tables and views, attaches an inline IAM policy to the Quick Sight service role for S3 access, and creates the Quick Sight Analysis and Dashboard. End-to-end runtime is approximately five minutes.
 
-   On a brand-new account, the deploy needs to write an inline IAM policy granting QuickSight access to the two S3 buckets it uses. The behavior depends on how you invoke the script:
+   On a brand-new account, the deploy needs to write an inline IAM policy granting Quick Sight access to the two S3 buckets it uses. The behavior depends on how you invoke the script:
 
    * **Interactive shell** (TTY): the script prints what it's going to write, asks for confirmation, and continues if you answer `y`.
    * **Non-interactive shell** (CI, piped stdin, `bash -c`, `yes |`, etc.): the script prints the exact `grant_quicksight_s3.py --apply` command, exits 1, and you re-run `scripts/deploy.sh` after applying.
@@ -160,7 +162,7 @@ Most visuals respond to the date-range picker, but one uses a **fixed window** b
 
 ### Deploying across Regions
 
-**The Kiro logs bucket does not have to be in the same Region as the dashboard.** Set `AWS_REGION` to wherever you want the dashboard (and where QuickSight is active) and point `KIRO_LOGS_BUCKET` at the export bucket in whatever Region it happens to be:
+**The Kiro logs bucket does not have to be in the same Region as the dashboard.** Set `AWS_REGION` to wherever you want the dashboard (and where Quick Sight is active) and point `KIRO_LOGS_BUCKET` at the export bucket in whatever Region it happens to be:
 
 ```bash
 export AWS_REGION=sa-east-1                      # dashboard + QuickSight here
@@ -169,13 +171,13 @@ export KIRO_LOGS_BUCKET=my-kiro-exports          # this bucket can be in us-east
 
 No extra configuration, flags, or code changes are needed.
 
-This works because of where each component reads from. Only the **normalizer Lambda** touches the raw Kiro bucket, and a cross-Region S3 `GetObject` is entirely normal. It writes the normalized parts to the results bucket that **this stack creates in `AWS_REGION`**, and that is the only location the Athena external tables point at - so Athena, Glue, and QuickSight all operate wholly within `AWS_REGION` on local data.
+This works because of where each component reads from. Only the **normalizer Lambda** touches the raw Kiro bucket, and a cross-Region S3 `GetObject` is entirely normal. It writes the normalized parts to the results bucket that **this stack creates in `AWS_REGION`**, and that is the only location the Athena external tables point at - so Athena, Glue, and Quick Sight all operate wholly within `AWS_REGION` on local data.
 
 Verified end to end with the source bucket in `eu-west-1` and the entire stack in `us-east-1`: all source files normalized, all views built, all SPICE datasets ingested, dashboard published.
 
 What *is* Region-bound:
 
-* **QuickSight must be active in `AWS_REGION`.** The Athena data source has no Region parameter (`AthenaParameters` carries only `WorkGroup`/`RoleArn`), so QuickSight and the Athena workgroup must be co-located. The stack always creates the workgroup in `AWS_REGION`, so this is satisfied automatically. Note a QuickSight account is per-AWS-account and lives in one Region unless you explicitly enable others - if `preflight.sh` reports QuickSight is not reachable, that is what it means.
+* **Quick Sight must be active in `AWS_REGION`.** The Athena data source has no Region parameter (`AthenaParameters` carries only `WorkGroup`/`RoleArn`), so Quick Sight and the Athena workgroup must be co-located. The stack always creates the workgroup in `AWS_REGION`, so this is satisfied automatically. Note a Quick Sight account is per-AWS-account and lives in one Region unless you explicitly enable others - if `preflight.sh` reports Quick Sight is not reachable, that is what it means.
 * **A CMK-encrypted bucket needs `KMS_KEY_ARN`** - including across Regions. If the Kiro bucket is encrypted with a customer-managed key, set `KMS_KEY_ARN` to that key's ARN so the stack grants the normalizer Lambda `kms:Decrypt` on it. This works cross-Region: a key is Regional in the sense that it lives in one Region and cannot be copied out of it, but it can be *called* from another Region, so a Lambda in `AWS_REGION` decrypts objects encrypted with a key in the bucket's Region. Verified with an `eu-west-1` CMK-encrypted bucket and the stack in `us-east-1`. Omitting `KMS_KEY_ARN` fails with `AccessDenied ... not authorized to perform: kms:Decrypt`; a bucket using default SSE-S3 encryption needs nothing.
 * **Inter-Region data transfer** applies to the Lambda's reads of the raw bucket. The daily export is a handful of small CSV files, so this is negligible - but it is not zero.
 
@@ -223,7 +225,7 @@ The four sheets:
 
 ## Upgrading
 
-The deployed version is recorded as a `KiroAnalyticsVersion` tag on every stack, and on each QuickSight dashboard version's description. Check what you are running before anything else:
+The deployed version is recorded as a `KiroAnalyticsVersion` tag on every stack, and on each Quick Sight dashboard version's description. Check what you are running before anything else:
 
 ```bash
 # What is deployed:
@@ -266,19 +268,19 @@ The solution is layered:
 
    **The normalizer never deletes anything.** A part is named for its (source key, ETag), so if Kiro re-exports a file *in place* with different content, the new content lands in a *new* part and the previous one is left untouched. Every row therefore carries `part_id` (which part it came from) and `processed_ts` (when that part was written) alongside `src_path`/`export_ts`, and the dedup views use them to make the superseded part unreachable rather than removing it - see the dedup rule below. Nothing in this pipeline issues a delete against your buckets.
 
-2. **Curated views** (`athena/*.sql`): `scripts/build_views.py` registers two **partitioned** Amazon Athena external tables (`report_facts_raw`, `report_models_raw`) over the normalized parts, using **partition projection** on `export_date` so no partition registration (`MSCK`/`ADD PARTITION`) is ever needed. On top of those it creates two dedup **views** (`report_facts`, `report_models`) that keep only the latest export per date/user/client via `ROW_NUMBER()` (latest-export-wins) - so deduplication happens in SQL at query time, which scales to any history size while the header parsing stays in the Lambda. The winning row is chosen by `(export_ts, processed_ts, part_id)` descending: newest **source** export first, then the most recently **written** part, then the part id as a final tiebreak. The last two matter when the same source file has been normalized more than once (see the note above) - they make the result deterministic and point it at the newest content, and `report_models` joins on `part_id` so a file's per-model rows are counted exactly once. Parts written by an older version of the normalizer have no `part_id`/`processed_ts`; they read as NULL, sort oldest, and are superseded automatically once the data is re-normalized. `base_user_activity` and `user_dim` read `report_facts`; `model_usage` is a straight projection of the long-form `report_models` (no model unpivot needed - the Lambda already melted the per-model columns into rows, so new Kiro models add rows, never columns). Other views compute daily trends (including new vs returning users), per-user totals (incl. a gap-filled per-user daily series for the User-detail charts), tier breakdowns, an activity heatmap, and week-over-week movers. (The People-sheet engagement funnel is computed in QuickSight from the base view rather than as its own Athena view, so it responds to the date range.)
+2. **Curated views** (`athena/*.sql`): `scripts/build_views.py` registers two **partitioned** Amazon Athena external tables (`report_facts_raw`, `report_models_raw`) over the normalized parts, using **partition projection** on `export_date` so no partition registration (`MSCK`/`ADD PARTITION`) is ever needed. On top of those it creates two dedup **views** (`report_facts`, `report_models`) that keep only the latest export per date/user/client via `ROW_NUMBER()` (latest-export-wins) - so deduplication happens in SQL at query time, which scales to any history size while the header parsing stays in the Lambda. The winning row is chosen by `(export_ts, processed_ts, part_id)` descending: newest **source** export first, then the most recently **written** part, then the part id as a final tiebreak. The last two matter when the same source file has been normalized more than once (see the note above) - they make the result deterministic and point it at the newest content, and `report_models` joins on `part_id` so a file's per-model rows are counted exactly once. Parts written by an older version of the normalizer have no `part_id`/`processed_ts`; they read as NULL, sort oldest, and are superseded automatically once the data is re-normalized. `base_user_activity` and `user_dim` read `report_facts`; `model_usage` is a straight projection of the long-form `report_models` (no model unpivot needed - the Lambda already melted the per-model columns into rows, so new Kiro models add rows, never columns). Other views compute daily trends (including new vs returning users), per-user totals (incl. a gap-filled per-user daily series for the User-detail charts), tier breakdowns, an activity heatmap, and week-over-week movers. (The People-sheet engagement funnel is computed in Quick Sight from the base view rather than as its own Athena view, so it responds to the date range.)
 
-3. **QuickSight DataSource and DataSets** (`cfn/02-quicksight.yaml`): One Amazon Athena DataSource and 8 SPICE datasets, each with its own daily refresh schedule staggered across 04:00-04:50 UTC (staggered to avoid all datasets hitting Athena at once).
+3. **Quick Sight DataSource and DataSets** (`cfn/02-quicksight.yaml`): One Amazon Athena DataSource and 8 SPICE datasets, each with its own daily refresh schedule staggered across 04:00-04:50 UTC (staggered to avoid all datasets hitting Athena at once).
 
-4. **Analysis and Dashboard** (`scripts/create_dashboard.py`): The Analysis and Dashboard are created via `boto3`. Assembling the QuickSight Definition payload as a Python dictionary keeps the visual configuration easy to edit and review. The script polls until the asset reaches a terminal state and exits non-zero on failure.
+4. **Analysis and Dashboard** (`scripts/create_dashboard.py`): The Analysis and Dashboard are created via `boto3`. Assembling the Quick Sight Definition payload as a Python dictionary keeps the visual configuration easy to edit and review. The script polls until the asset reaches a terminal state and exits non-zero on failure.
 
 5. **Identity mapping** (`cfn/03-identity-mapping.yaml`, optional): Created only when `IDENTITY_MAPPING=true`. A Lambda resolves user GUIDs to names via AWS IAM Identity Center and lands a lookup CSV in a dedicated encrypted bucket that the curated views join. See [Resolving user identities](#resolving-user-identities-optional).
 
 ## Cost
 
-**The data pipeline is not what this costs. Amazon QuickSight user licences are, by three to four orders of magnitude.** Budget by counting the people you will entitle as readers, not by estimating data volume.
+**The data pipeline is not what this costs. AWS Quick Sight user licences are, by three to four orders of magnitude.** Budget by counting the people you will entitle as readers, not by estimating data volume.
 
-All figures are `us-east-1` list price, measured on real deployments of this sample and checked against the AWS Price List API. **Prices change and these numbers can go stale** — verify against the [QuickSight](https://aws.amazon.com/quicksight/pricing/), [Athena](https://aws.amazon.com/athena/pricing/), [Lambda](https://aws.amazon.com/lambda/pricing/) and [S3](https://aws.amazon.com/s3/pricing/) pricing pages for your Region and negotiated rates. To re-verify what this repo claims against what AWS currently charges:
+All figures are `us-east-1` list price, measured on real deployments of this sample and checked against the AWS Price List API. **Prices change and these numbers can go stale** — verify against the [Quick Sight](https://aws.amazon.com/quicksight/pricing/), [Athena](https://aws.amazon.com/athena/pricing/), [Lambda](https://aws.amazon.com/lambda/pricing/) and [S3](https://aws.amazon.com/s3/pricing/) pricing pages for your Region and negotiated rates. To re-verify what this repo claims against what AWS currently charges:
 
 ```bash
 python3 scripts/check_pricing.py
@@ -318,7 +320,7 @@ This is the entire cost decision:
 | 1 author + 1,000 readers | $3,024 |
 | 1 author + 8,000 readers (all seats) | **$24,024** |
 
-> **The trap.** Entitling every Kiro seat as a dashboard reader rather than the ~25 people who actually need it is a **243× bill increase** — from $99 to $24,024/month. Nothing in a deploy warns you, because entitlement happens in the QuickSight console afterwards, not in this stack. This dashboard reports on *managers'* questions about a fleet; the fleet does not need to read it.
+> **The trap.** Entitling every Kiro seat as a dashboard reader rather than the ~25 people who actually need it is a **243× bill increase** — from $99 to $24,024/month. Nothing in a deploy warns you, because entitlement happens in the Quick Sight console afterwards, not in this stack. This dashboard reports on *managers'* questions about a fleet; the fleet does not need to read it.
 
 Readers are billed per provisioned user per month whether or not they log in, so an entitlement granted once and forgotten keeps billing. Audit periodically:
 
@@ -329,7 +331,7 @@ aws quicksight list-users --aws-account-id "$ACCOUNT_ID" --namespace default \
 
 ### The $250/month fee that dwarfs everything else here
 
-An account with **at least one Pro user** (`AUTHOR_PRO` / `READER_PRO` / `ADMIN_PRO`), or with **Amazon Q in QuickSight enabled**, incurs a **flat $250/month per-account infrastructure fee** — about **6,000× this pipeline's entire cost**, and it applies to the account regardless of this sample.
+An account with **at least one Pro user** (`AUTHOR_PRO` / `READER_PRO` / `ADMIN_PRO`), or with **Q&A enabled via Topics**, incurs a **flat $250/month per-account infrastructure fee** — about **6,000× this pipeline's entire cost**, and it applies to the account regardless of this sample.
 
 Check before you attribute it to this dashboard:
 
@@ -337,19 +339,23 @@ Check before you attribute it to this dashboard:
 # Any Pro user in the account triggers the fee:
 aws quicksight list-users --aws-account-id "$ACCOUNT_ID" --namespace default \
     --region "$AWS_REGION" --query "UserList[?ends_with(Role,'PRO')].[UserName,Role]" --output table
+
+# Q&A enabled via Topics triggers it too. Any Topic listed here means Q&A is set up:
+aws quicksight list-topics --aws-account-id "$ACCOUNT_ID" \
+    --region "$AWS_REGION" --query 'TopicsSummaries[].[Name,TopicId]' --output table
 ```
 
-If that returns rows, the $250 is already on your bill and this sample did not put it there. A plain `AUTHOR` and `READER` deployment does not incur it.
+If either returns rows, the $250 is already on your bill and this sample did not put it there. A plain `AUTHOR` and `READER` deployment with no Topics does not incur it.
 
 ### Reducing cost
 
 In descending order of impact — the first item is worth more than every other line combined:
 
-1. **Entitle fewer readers.** Share the dashboard with the people who act on it. Use a QuickSight group rather than per-user grants so removal is one operation. Everything below is rounding error next to this.
+1. **Entitle fewer readers.** Share the dashboard with the people who act on it. Use a Quick Sight group rather than per-user grants so removal is one operation. Everything below is rounding error next to this.
 2. **Avoid Pro users and Q** in the account if you do not need them (saves $250/month).
 3. **Reduce refresh frequency** if daily is more than you need. Each dataset has its own schedule in `cfn/02-quicksight.yaml`; the 8 datasets plus the normalizer are the whole query load.
 4. **Set `LOG_RETENTION_DAYS`** lower than the 30-day default if log volume grows.
-5. **Tear down when evaluating.** `scripts/teardown.sh` removes everything billable that this stack created; unsubscribing QuickSight is a separate console action, and licence charges continue until you do it.
+5. **Tear down when evaluating.** `scripts/teardown.sh` removes everything billable that this stack created; unsubscribing Quick Sight is a separate console action, and licence charges continue until you do it.
 
 Costs are tagged `KiroAnalyticsVersion` on every stack (see [Upgrading](#upgrading)), so you can also split this out in AWS Cost Explorer once you activate that as a cost-allocation tag.
 
@@ -371,13 +377,13 @@ Costs are tagged `KiroAnalyticsVersion` on every stack (see [Upgrading](#upgradi
 
 * **Kiro adds a new model**: No action needed. Because the normalizer melts per-model columns into rows keyed by header name, a new `<model>_messages` column is picked up automatically on the Lambda's next daily run and appears as a new `model_name` value - no schema change, no re-deploy. (Re-run `scripts/deploy.sh` only if you want it reflected immediately rather than at the next scheduled run.)
 
-* **Row-level security**: Not configured by default. Add a QuickSight RLS dataset rule keyed on `subscription_tier`, `user_id`, or another column to scope visuals per viewer.
+* **Row-level security**: Not configured by default. Add a Quick Sight RLS dataset rule keyed on `subscription_tier`, `user_id`, or another column to scope visuals per viewer.
 
 * **Resolve user IDs to human names**: Set `IDENTITY_MAPPING=true` (and the `IDENTITY_STORE_ID` / `IDC_REGION` inputs). See [Resolving user identities](#resolving-user-identities-optional) below.
 
 ### Resolving user identities (optional)
 
-> **⚠️ IMPORTANT — personal data:** Enabling identity mapping pulls real names and email addresses (personal data) into Amazon QuickSight SPICE. If your IAM Identity Center is in a different AWS Region than the dashboard, this performs a **cross-region transfer of personal data**. Review [SECURITY.md](./SECURITY.md#identity-mapping-optional) and confirm this is acceptable under your GDPR, data-residency, and privacy obligations **before** enabling.
+> **⚠️ IMPORTANT — personal data:** Enabling identity mapping pulls real names and email addresses (personal data) into AWS Quick Sight SPICE. If your IAM Identity Center is in a different AWS Region than the dashboard, this performs a **cross-region transfer of personal data**. Review [SECURITY.md](./SECURITY.md#identity-mapping-optional) and confirm this is acceptable under your GDPR, data-residency, and privacy obligations **before** enabling.
 
 The Kiro User Activity Report identifies each user by an opaque `user_id` GUID, and the `email` column is often empty in real exports. By default the dashboard therefore labels users by their GUID. If your users sign in through **AWS IAM Identity Center**, you can opt in to resolving those GUIDs to human names (display name, username, email).
 
@@ -416,7 +422,7 @@ aws sso-admin list-instances --query 'Instances[].IdentityStoreId' --output text
 
 **Important constraints.**
 
-* This pulls real names and email addresses into Amazon QuickSight SPICE. Review [SECURITY.md](./SECURITY.md#identity-mapping-optional) before enabling, especially if Identity Center is in a different AWS Region (a cross-region transfer of personal data).
+* This pulls real names and email addresses into AWS Quick Sight SPICE. Review [SECURITY.md](./SECURITY.md#identity-mapping-optional) before enabling, especially if Identity Center is in a different AWS Region (a cross-region transfer of personal data).
 * Only users who sign in via **IAM Identity Center** resolve. Users on an **external identity provider** (Okta, Entra, etc.), **AWS Builder ID**, or **social login** are not in the Identity Store and keep their GUID label.
 * `IDENTITY_MAPPING` and `HASH_EMAILS` are mutually exclusive - resolving users to real names while hashing their email is contradictory, and the deploy script refuses to run with both set.
 
@@ -476,8 +482,8 @@ Everything requiring an AWS account is out of scope by design — a contributor 
 ## Troubleshooting
 
 * **`scripts/preflight.sh` or `scripts/deploy.sh` hangs at the Kiro export layout / prefix detection step**: the script is running `aws s3 ls --recursive` to auto-detect `KIRO_LOGS_PREFIX`. On large buckets that hold other content (Amazon Q logs, other AWS service logs, prompt logs from another product) this can take many minutes and incurs an S3 LIST charge per 1000 keys scanned. Interrupt with Ctrl-C, find the prefix non-recursively (`aws s3 ls "s3://${KIRO_LOGS_BUCKET}/" --region "${AWS_REGION}"`), set `KIRO_LOGS_PREFIX` explicitly (e.g. `export KIRO_LOGS_PREFIX="usage-activity/"`), and re-run.
-* **`AthenaDataSource` fails with "Unable to verify/create output bucket"**: QuickSight does not have write access to the Athena results bucket. Re-run `scripts/deploy.sh` - the permission check will detect missing actions and offer to apply them. See [QuickSight permission errors](https://repost.aws/knowledge-center/quicksight-permission-errors) and [Athena output bucket error](https://repost.aws/knowledge-center/athena-output-bucket-error) for background.
-* **`scripts/deploy.sh` reports a stack is in `ROLLBACK_COMPLETE`**: the script will detect and delete the rolled-back QuickSight stack automatically before re-deploying. If the data stack is stuck, run `scripts/teardown.sh` and start fresh.
+* **`AthenaDataSource` fails with "Unable to verify/create output bucket"**: Quick Sight does not have write access to the Athena results bucket. Re-run `scripts/deploy.sh` - the permission check will detect missing actions and offer to apply them. See [Quick Sight permission errors](https://repost.aws/knowledge-center/quicksight-permission-errors) and [Athena output bucket error](https://repost.aws/knowledge-center/athena-output-bucket-error) for background.
+* **`scripts/deploy.sh` reports a stack is in `ROLLBACK_COMPLETE`**: the script will detect and delete the rolled-back Quick Sight stack automatically before re-deploying. If the data stack is stuck, run `scripts/teardown.sh` and start fresh.
 * **The report-normalizer Lambda fails or the dashboard is empty**: check the Lambda's CloudWatch logs (`/aws/lambda/<stack-prefix>-data-normalize-report`). The most common cause is that its IAM role cannot read the Kiro logs bucket - verify the bucket policy and (for KMS-encrypted buckets) the KMS key policy, and set `KMS_KEY_ARN` before re-deploying if encryption is in play. The Lambda fails closed (leaves the previous normalized output in place), so a transient failure does not blank the dashboard.
 * **Updating an existing deployment: re-normalize once so every part carries `part_id`/`processed_ts`.** Parts written before those columns existed read as NULL and sort oldest, so they are superseded as soon as the same source file is normalized again - but that only happens automatically for files Kiro re-exports. To backfill everything in one pass, set `REPROCESS_ALL=true` on the normalizer Lambda, invoke it once, then unset it (leaving it on would re-parse the whole history daily):
 
@@ -500,7 +506,7 @@ Everything requiring an AWS account is out of scope by design — a contributor 
 scripts/teardown.sh
 ```
 
-The teardown script deletes the QuickSight Dashboard, Analysis, both AWS CloudFormation stacks, and the Amazon Athena results bucket. The Kiro logs bucket and its contents are not modified. The script is idempotent and is safe to re-run.
+The teardown script deletes the Quick Sight Dashboard, Analysis, both AWS CloudFormation stacks, and the Amazon Athena results bucket. The Kiro logs bucket and its contents are not modified. The script is idempotent and is safe to re-run.
 
 If identity mapping was enabled, teardown also removes the `<prefix>-identity-map` stack and **empties and deletes its dedicated PII bucket** (and the bucket's access-log bucket), purging all object versions so no resolved names survive. The bucket's **AWS KMS key is retained** (it has `DeletionPolicy: Retain`, the safe default for a CMK). A retained customer-managed key continues to bill at **$1/month** (prorated hourly) even with nothing left to decrypt - more than this entire pipeline costs to run - so remove it if you are done. Schedule its deletion manually:
 
@@ -518,7 +524,7 @@ to change. Refer to [SECURITY.md](./SECURITY.md) for the full shared
 responsibility model.
 
 * **Email is ingested into SPICE in plaintext** unless `HASH_EMAILS=true` is set at deploy time. Customer responsibility: decide whether plaintext email is acceptable for the dashboard's audience based on data classification, and re-deploy with `HASH_EMAILS=true` if not.
-* **Row-Level Security (RLS) is not configured.** Any principal with `quicksight:QueryDashboard` permission sees every user's data. Customer responsibility: configure dashboard permissions in Amazon QuickSight, and add an RLS dataset rule keyed on `subscription_tier` / `user_id` / etc. if per-row scoping is required (see Customization options).
+* **Row-Level Security (RLS) is not configured.** Any principal with `quicksight:QueryDashboard` permission sees every user's data. Customer responsibility: configure dashboard permissions in AWS Quick Sight, and add an RLS dataset rule keyed on `subscription_tier` / `user_id` / etc. if per-row scoping is required (see Customization options).
 * **User identities are shown as opaque GUIDs** unless `IDENTITY_MAPPING=true` is set and the users sign in via AWS IAM Identity Center. Customer responsibility: decide whether resolving GUIDs to real names (which pulls personal data into SPICE, possibly across regions) is appropriate for the dashboard's audience. See [Resolving user identities](#resolving-user-identities-optional) and [SECURITY.md](./SECURITY.md#identity-mapping-optional).
 * Pre-April 2026 exports lack the `email` column and per-model `_messages` columns. The build script tolerates their absence; the affected visuals show user IDs or remain empty.
 * Multiple Amazon S3 exports for the same `(user_id, date, client)` are deduped by keeping the most-recent export (the normalizer Lambda stamps each row with its source export and the part it was written into, and an Athena view keeps the latest via `ROW_NUMBER()`).
@@ -535,14 +541,14 @@ responsibility model.
 | Athena results Amazon S3 bucket | SSE-S3 (`AES256`) by default, plus a TLS-only bucket policy. Versioning enabled. Lifecycle: `query-results/` expires after 7 days (short because those results carry resolved names/emails when identity mapping is on); `normalized/` (the dashboard's source data) is retained. Server access logging is opt-in (CloudTrail covers Athena API events at the account level). | This stack |
 | Amazon Athena query results | `EncryptionConfiguration: SSE_S3` enforced by `EnforceWorkGroupConfiguration: true` on the workgroup. | This stack |
 | Identity-map Amazon S3 bucket (only when `IDENTITY_MAPPING=true`) | SSE-KMS with a dedicated customer-managed key (rotation enabled), plus server access logging, versioning, a TLS-only bucket policy, and a 30-day noncurrent-version lifecycle. Holds resolved names/emails (PII), isolated from the rest of the solution's data. | This stack |
-| Amazon QuickSight SPICE | Encrypted at rest with service-managed keys. There is no CFN property to configure SPICE encryption; it is on by default for Enterprise edition. | Amazon QuickSight |
+| AWS Quick Sight SPICE | Encrypted at rest with service-managed keys. There is no CFN property to configure SPICE encryption; it is on by default for Enterprise edition. | AWS Quick Sight |
 | AWS Glue Data Catalog | Account+region-wide setting (not per-database). This stack does not toggle it because that would affect every other AWS Glue database in the account. To enable, run once per account/region: `aws glue put-data-catalog-encryption-settings --data-catalog-encryption-settings 'EncryptionAtRest={CatalogEncryptionMode=SSE-KMS-WITH-SERVICE-MANAGED-KEY}'`. | Customer |
 
-All inter-service traffic uses TLS 1.2+ (S3, Athena, AWS Glue, QuickSight, IAM endpoints). The Athena results bucket policy denies any request that does not set `aws:SecureTransport=true`.
+All inter-service traffic uses TLS 1.2+ (S3, Athena, AWS Glue, Quick Sight, IAM endpoints). The Athena results bucket policy denies any request that does not set `aws:SecureTransport=true`.
 
 ## Security
 
-See [SECURITY.md](./SECURITY.md) for the shared responsibility model, per-service security guidance (Amazon S3, AWS IAM, AWS Glue, Amazon Athena, Amazon QuickSight, AWS KMS), the configuration defaults this stack applies, and the threat summary.
+See [SECURITY.md](./SECURITY.md) for the shared responsibility model, per-service security guidance (Amazon S3, AWS IAM, AWS Glue, Amazon Athena, AWS Quick Sight, AWS KMS), the configuration defaults this stack applies, and the threat summary.
 
 To report a security vulnerability in this code, see [CONTRIBUTING.md](./CONTRIBUTING.md#security-issue-notifications) - notify AWS/Amazon Security via the [vulnerability reporting page](https://aws.amazon.com/security/vulnerability-reporting/) rather than opening a GitHub issue.
 
